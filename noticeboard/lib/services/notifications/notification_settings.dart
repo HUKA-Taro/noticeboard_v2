@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../styles/profile_constants.dart';
+import 'backend_status_tile.dart';
 import 'custom_push_service.dart';
 
 class NotificationSettings extends StatefulWidget {
@@ -27,7 +28,8 @@ class _NotificationSettingsState extends State<NotificationSettings> {
         _values[topic] = await CustomPushService.enabled(topic);
       }
     } catch (_) {
-      _error = 'Could not load notification settings. Reopen this screen to retry.';
+      _error =
+          'Could not load notification settings. Reopen this screen to retry.';
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -62,6 +64,7 @@ class _NotificationSettingsState extends State<NotificationSettings> {
         ),
         body: ListView(
           children: [
+            const BackendStatusTile(),
             for (final entry in CustomPushService.topics.entries)
               SwitchListTile(
                 title: Text(entry.value, style: boldMediumGreyMediumSizeText),

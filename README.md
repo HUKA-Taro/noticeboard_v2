@@ -88,3 +88,13 @@ flutter build apk --debug
 ```
 
 The APK is written to `noticeboard/build/app/outputs/flutter-apk/app-debug.apk` relative to the repository root. The notification test menu is excluded from release builds.
+
+## Check the notification backend
+
+Open **Profile > Notification settings** to see whether the checker is online,
+offline, or running with a feed that is not ready. The app refreshes the status
+every 30 seconds while this screen is open. Tap the refresh icon to check again.
+The status becomes available once the checker host configures and publishes its
+Firestore heartbeat. If Firestore cannot be reached, the app reports that it
+could not verify the status.
+Use the notice alerts switch to control new and updated notice pushes.
