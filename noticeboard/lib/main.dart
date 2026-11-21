@@ -35,12 +35,13 @@ Future<void> main() async {
       final notification = message.notification;
       if (notification == null) return;
       try {
+        if (!await CustomPushService.enabled('noticeboard_v2_alerts')) return;
         await notifications.invokeMethod('show', {
           'title': notification.title,
           'body': notification.body,
         });
-      } on PlatformException catch (error) {
-        debugPrint('Unable to display notification: ${error.code}');
+      } catch (error) {
+        debugPrint('Unable to display notification: $error');
       }
     });
   }

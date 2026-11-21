@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_messaging/firebase_messaging.dart' hide NotificationSettings;
 import 'package:noticeboard/global/global_constants.dart';
 import 'package:noticeboard/global/global_functions.dart';
 import 'package:noticeboard/models/user_profile.dart';
@@ -12,6 +12,9 @@ import '../styles/profile_constants.dart';
 import '../bloc/profile_bloc.dart';
 import '../enum/profile_enum.dart';
 import '../services/auth/auth_repository.dart';
+
+import '../services/notifications/custom_push_service.dart';
+import '../services/notifications/notification_settings.dart';
 
 class Profile extends StatefulWidget {
   @override
@@ -117,10 +120,14 @@ class _ProfileState extends State<Profile> {
                   buildMenuItem(
                       feedbackIcon, 'Feedback', ProfileEvents.feedbackEvent),
                   sizedBox(20.0),
-                  buildMenuItem(
-                      notificationSettingsIcon,
-                      'Notification settings',
-                      ProfileEvents.notificationSettingsEvent),
+                  if (CustomPushService.supported)
+                    _profileNotificationItem(
+                      icon: Icons.settings,
+                      title: 'Notification settings',
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const NotificationSettings(),
+                      )),
+                    ),
                   sizedBox(20.0),
                   buildMenuItem(
                       aboutUsIcon, "About us", ProfileEvents.aboutUsEvent),
@@ -131,16 +138,15 @@ class _ProfileState extends State<Profile> {
                       !kIsWeb &&
                       defaultTargetPlatform == TargetPlatform.android) ...[
                     const SizedBox(height: 20),
-                    ListTile(
-                      leading: const Icon(Icons.notifications_active),
-                      title: const Text('Test notification now'),
+                    _profileNotificationItem(
+                      icon: Icons.notifications_active,
+                      title: 'Test notification now',
                       onTap: () => _testNotification(false),
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.timer_outlined),
-                      title: const Text('Test notification in 30 seconds'),
-                      subtitle: const Text(
-                          'Schedule, then clear the app from Recents.'),
+                    _profileNotificationItem(
+                      icon: Icons.timer_outlined,
+                      title: 'Test notification in 30 seconds',
+                      subtitle: 'Schedule, then clear the app from Recents.',
                       onTap: () => _testNotification(true),
                     ),
                   ],
@@ -168,6 +174,36 @@ class _ProfileState extends State<Profile> {
             style: boldMediumGreyMediumSizeText,
           )
         ],
+      ),
+    );
+  }
+
+  Widget _profileNotificationItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    String? subtitle,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(icon, color: notificationSettingsIcon.color),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: boldMediumGreyMediumSizeText),
+                  if (subtitle != null)
+                    Text(subtitle, style: lightGreySmallSizeText),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
