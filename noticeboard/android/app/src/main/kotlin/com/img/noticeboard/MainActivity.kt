@@ -13,6 +13,15 @@ import android.os.SystemClock
 class MainActivity: FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "channeli/app_info")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "version") {
+                    result.success(packageManager.getPackageInfo(packageName, 0).versionName)
+                } else {
+                    result.notImplemented()
+                }
+            }
         NoticeNotifications.createChannel(this)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "noticeboard/notifications")
             .setMethodCallHandler { call, result ->

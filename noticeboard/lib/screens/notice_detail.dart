@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'shortlist_profiles.dart';
 import 'package:noticeboard/bloc/list_notices_bloc.dart';
 import 'package:noticeboard/bloc/notice_detail_bloc.dart';
 import 'package:noticeboard/enum/current_widget_enum.dart';
@@ -40,6 +41,48 @@ class _NoticeDetailState extends State<NoticeDetail> {
   bool snackBarShown = false;
   late StreamSubscription _streamSubscription;
   int currentIndex = 0;
+  String? _noticeHtml;
+  String? _shortlistHtml;
+  bool _showProfiles = false;
+  bool _loadingProfiles = false;
+
+  bool get _isShortlist {
+    final title = widget.noticeIntro?.title?.toLowerCase() ?? '';
+    final content = _noticeHtml?.toLowerCase() ?? '';
+    return title.contains('shortlist') || content.contains('shortlist');
+  }
+
+  Future<void> _toggleProfiles() async {
+    if (_loadingProfiles) return;
+    if (_showProfiles) {
+      setState(() => _showProfiles = false);
+      return;
+    }
+    final source = _noticeHtml;
+    if (source == null || !_isShortlist) return;
+    final profiles = ShortlistProfiles(source);
+    if (!profiles.hasLinks) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No clearly labelled enrollment numbers found.'),
+      ));
+      return;
+    }
+    setState(() {
+      _showProfiles = true;
+      _loadingProfiles = true;
+      _shortlistHtml = profiles.markup;
+    });
+    try {
+      await profiles.loadAcademicDetails(active: () => mounted && _noticeHtml == source);
+    } catch (_) {
+      // Browser profile links remain usable without academic details.
+    }
+    if (!mounted) return;
+    setState(() {
+      _loadingProfiles = false;
+      if (_noticeHtml == source) _shortlistHtml = profiles.markup;
+    });
+  }
 
   @override
   void initState() {
@@ -85,6 +128,18 @@ class _NoticeDetailState extends State<NoticeDetail> {
           ),
           backgroundColor: globalBlueColor,
           centerTitle: false,
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (_) => _toggleProfiles(),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'profiles',
+                  enabled: _isShortlist && !_loadingProfiles,
+                  child: Text(_showProfiles ? 'Hide student profiles' : 'Show student profiles'),
+                ),
+              ],
+            ),
+          ],
           title: Text(
             widget.noticeIntro!.department!,
             overflow: TextOverflow.ellipsis,
@@ -165,7 +220,13 @@ class _NoticeDetailState extends State<NoticeDetail> {
   }
 
 Container buildContent(AsyncSnapshot snapshot) {
-    String modifiedHtml = wrapHtmlHeaders(snapshot.data.content);
+    final source = snapshot.data.content as String? ?? '';
+    if (_noticeHtml != source) {
+      _noticeHtml = source;
+      _shortlistHtml = null;
+      _showProfiles = false;
+    }
+    final modifiedHtml = wrapHtmlHeaders(_showProfiles ? _shortlistHtml ?? source : source);
     final delegate = PlatformNavigationDelegate(
       const PlatformNavigationDelegateCreationParams(),
     );

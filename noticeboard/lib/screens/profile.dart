@@ -1,3 +1,4 @@
+import '../shared/profile_app_update.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -150,6 +151,7 @@ class _ProfileState extends State<Profile> {
                       onTap: () => _testNotification(true),
                     ),
                   ],
+                  const ProfileAppUpdate(),
                 ],
               ),
             ),
