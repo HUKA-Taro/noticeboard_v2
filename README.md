@@ -1,100 +1,42 @@
-<div>
-    <img src="readmeAssets/noticeboard.svg" align=left height=40>
-    <h1>Noticeboard V2</h1>
-</div>
+# Noticeboard V2
 
-<div>
-    <img src="readmeAssets/ds1.png" width=85> &emsp;
-    <img src="readmeAssets/ds2.png" width=85> &emsp;
-    <img src="readmeAssets/ds3.png" width=85> &emsp;
-    <img src="readmeAssets/ds4.png" width=85> &emsp;
-    <img src="readmeAssets/ds5.png" width=85> &emsp;
-    <img src="readmeAssets/ds6.png" width=85> &emsp;
-    <img src="readmeAssets/ds7.png" width=85 height=178.256> &emsp;
-</div>
-</br>
+Based on [Noticeboard Mobile App](https://github.com/IMGIITRoorkee/noticeboard-mobile-app). The original app and design are credited to the Information Management Group (IMG) team at IIT Roorkee.
 
-## Download for Android
+Browse Channel i notices on Android, bookmark what matters, and get alerts when notices are posted or updated.
 
-Get the APK from [Noticeboard V2 releases](https://github.com/HUKA-Taro/noticeboardv2/releases). If you previously installed a debug build of this V2 app, uninstall that build first and sign in again after installing the release.
+## Install on Android
 
-## About the app
-Noticeboard V2 is an unofficial, extensively modified Android app built on [IMG's Noticeboard Mobile App](https://github.com/IMGIITRoorkee/noticeboard-mobile-app). The original app and design are by the Information Management Group (IMG), IIT Roorkee. V2 changes are by HUKA_Taro.
+1. Download the APK from [GitHub Releases](https://github.com/HUKA-Taro/noticeboardv2/releases/latest) and open it on your phone.
+2. Sign in with your Channel i account and allow notifications if you want alerts.
 
-The Android app uses your Channel i account to browse notices, search and filter them, and manage bookmarks.
+If you installed a V2 debug build, uninstall it before installing the release APK. GitHub restricts downloads to users with repository access while the repository is private.
+
+Your installed version is shown at the bottom of **Profile**. Tap **Check for updates** to see if a newer public release is available.
 
 ## Features
-- View notices without having to open Channel i, just login and you are set!
-- Get alerts for new or updated notices when the custom backend is running.
-- A separate tab for the ever important placement and intern notices.
-- Use that search bar or filter for more fine results.
-- Bookmark notices on the go!
 
-## Terms of Service
-Terms to Service: https://docs.google.com/document/d/1vsbooZi9PIiVIMaLts2wv0tODEJafCaRT41zsENYN3I/edit
+- Search and filter notices, browse the placement and internship feed, and save bookmarks.
+- Open a notice with “shortlist” in its title or body, then choose **Show student profiles** from the overflow menu. Recognized enrollment numbers link to Channel i profiles. Branch and year appear when the signed-in account can retrieve them. Scanned documents and images require a manual lookup.
+- Receive alerts for new and updated notices, including while the app is open.
 
-## Privacy Policy
-Privacy Policy: https://docs.google.com/document/d/1IPibdlVJNO8IZVQqOjBk7m4mFRXOD8RJFvrlRAMeV3s/edit
+## Notification settings
 
-## Tech Stack
-- `Flutter` for app code.
-- `Firebase` for notifications.
+Open **Profile → Notification settings** to manage alerts and see the checker’s status. The status refreshes every 30 seconds while this screen is open. You can also tap the refresh icon.
 
-## Contributing
-- Fork the repository to your account.
-- Branch out to `a_meaningful_branch_name`.
-- Commit your changes.
-- Add your name to `CONTRIBUTORS.md`.
-- File a `Pull request`.
-- Get your pull request merged.
+Automatic alerts depend on the [Channel i checker](https://github.com/HUKA-Taro/channeli-checker) reaching the feeds and sending pushes through Firebase Cloud Messaging. An online checker can still show that a feed is unready. Contact [HUKA_Taro](https://github.com/HUKA-Taro) if you want to host the checker. The notice alerts switch controls both new and updated notices.
 
-It's that simple!
+Android can display alerts after you swipe the app away from Recents. If you force-stop the app in Android settings, reopen it to resume delivery.
 
-## Credits
-<img src=readmeAssets/img.svg>
+## Build locally
 
-## Noticeboard V2 by HUKA_Taro
-
-> [!IMPORTANT]
-> Automatic alerts require the custom backend described below.
-
-This version includes notification improvements and Android testing tools:
-
-- Requests Android notification permission and subscribes to the `noticeboard_v2_alerts` topic in the custom Firebase project.
-- Receives new and updated notice alerts from a private backend through Firebase.
-- Displays incoming FCM notification messages while the Android app is open, using a high-importance notification channel. Banners and sound depend on Android notification settings.
-- Adds **Test notification now** and **Test notification in 30 seconds** to the profile menu in Android debug builds.
-- Schedules the delayed test using Android's alarm scheduler so it can fire after the app is removed from Recents. The test receiver and alarm permissions are declared only in the debug manifest.
-- Updates the Android Gradle Plugin to 9.1.1 and limits Gradle memory and parallel workers for local builds on machines with limited available memory.
-
-### Testing notifications
-
-1. Install a debug build, sign in, and allow notification permission.
-2. Tap your profile picture and choose **Test notification now** to check local notification display.
-3. Choose **Test notification in 30 seconds**, then remove Noticeboard from Recents. Wait for the scheduled notification. Do not use Android's **Force stop**, which prevents this test from running until the app is reopened.
-
-The local debug notification buttons test display only. Automatic pushes require the V2 Firebase configuration and the private backend. Background alerts are displayed by Android after the app has been opened once and notification permission is allowed; Android force-stop prevents delivery until the app is opened again.
-
-### Firebase setup for V2
-
-Create a Firebase project you control and register an Android app with package name `com.huka.taro.noticeboardv2`. Download its `google-services.json` and replace `noticeboard/android/app/google-services.json`. Do not use IMG's old Firebase configuration for the V2 package.
-
-**Automatic alerts require the custom backend.** The backend checks for updates and sends Firebase pushes while it is running. Other app features use Channel i. Contact [HUKA_Taro](https://github.com/HUKA-Taro) if you need access to host the checker locally.
-
-To build an Android debug APK from the `noticeboard` directory:
+Install Flutter and the Android SDK. Register `com.huka.taro.noticeboardv2` as an Android app in your Firebase project and put its `google-services.json` in `noticeboard/android/app/`. Your checker must send to the same Firebase project to deliver pushes to your build.
 
 ```sh
+cd noticeboard
+flutter pub get
 flutter build apk --debug
 ```
 
-The APK is written to `noticeboard/build/app/outputs/flutter-apk/app-debug.apk` relative to the repository root. The notification test menu is excluded from release builds.
+Find the APK at `build/app/outputs/flutter-apk/app-debug.apk` relative to the Flutter project directory.
 
-## Check the notification backend
-
-Open **Profile > Notification settings** to see whether the checker is online,
-offline, or running with a feed that is not ready. The app refreshes the status
-every 30 seconds while this screen is open. Tap the refresh icon to check again.
-The status becomes available once the checker host configures and publishes its
-Firestore heartbeat. If Firestore cannot be reached, the app reports that it
-could not verify the status.
-Use the notice alerts switch to control new and updated notice pushes.
+Android debug builds offer **Test notification now** and **Test notification in 30 seconds** in Profile. These test local display. Use a checker push to test delivery through Firebase.
