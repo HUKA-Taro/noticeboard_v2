@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:noticeboard/global/global_functions.dart';
 import '../enum/dynamic_fetch_enum.dart';
 import '../screens/list_notices.dart';
 import '../models/notice_intro.dart';
