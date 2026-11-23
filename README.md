@@ -6,37 +6,37 @@ Browse Channel i notices on Android, bookmark what matters, and get alerts when 
 
 ## Install on Android
 
-1. Download the APK from [GitHub Releases](https://github.com/HUKA-Taro/noticeboardv2/releases/latest) and open it on your phone.
+1. Open the signed release APK on your phone and follow Android's installation prompts.
 2. Sign in with your Channel i account and allow notifications if you want alerts.
 
-If you installed a V2 debug build, uninstall it before installing the release APK. GitHub restricts downloads to users with repository access while the repository is private.
-
-Your installed version is shown at the bottom of **Profile**. Tap **Check for updates** to see if a newer public release is available.
+Your installed version is shown at the bottom of **Profile**. On launch, the app checks the required build published by the Channel i checker. If an update is required, the app opens the official APK download when you tap **Install latest version**. Android asks you to confirm the installation.
 
 ## Features
 
 - Search and filter notices, browse the placement and internship feed, and save bookmarks.
-- Open a notice with “shortlist” in its title or body, then choose **Show student profiles** from the overflow menu. Recognized enrollment numbers link to Channel i profiles. Branch and year appear when the signed-in account can retrieve them. Scanned documents and images require a manual lookup.
+- Open a notice with “shortlist” in its title or body, then choose **Show student profiles** from the overflow menu. Recognized enrollment numbers link to Channel i profiles. Branch and year appear when the signed-in account can retrieve them.
+- Choose **Show counts** in a shortlist notice to see unique recognized students, room counts when available, and branch counts as profiles load.
 - Receive alerts for new and updated notices, including while the app is open.
 
 ## Notification settings
 
-Open **Profile → Notification settings** to manage alerts and see the checker’s status. The status refreshes every 30 seconds while this screen is open. You can also tap the refresh icon.
+Open **Profile → Notification settings** to manage alerts.
 
-Automatic alerts depend on the [Channel i checker](https://github.com/HUKA-Taro/channeli-checker) reaching the feeds and sending pushes through Firebase Cloud Messaging. An online checker can still show that a feed is unready. Contact [HUKA_Taro](https://github.com/HUKA-Taro) if you want to host the checker. The notice alerts switch controls both new and updated notices.
+Automatic alerts depend on the [Channel i checker](https://github.com/HUKA-Taro/channeli-checker) reaching the feeds and sending pushes through Firebase Cloud Messaging. Contact [HUKA_Taro](https://github.com/HUKA-Taro) if you want to host the checker. The notice alerts switch controls both new and updated notices.
+
+**Send test notification** shows a local notification. If Android blocks notifications, the app will ask for permission or direct you to Android settings.
 
 Android can display alerts after you swipe the app away from Recents. If you force-stop the app in Android settings, reopen it to resume delivery.
 
 ## Build locally
 
-Install Flutter and the Android SDK. Register `com.huka.taro.noticeboardv2` as an Android app in your Firebase project and put its `google-services.json` in `noticeboard/android/app/`. Your checker must send to the same Firebase project to deliver pushes to your build.
+Install Flutter and the Android SDK. Register `com.huka.taro.noticeboardv2` as an Android app in your Firebase project and put its `google-services.json` in `android/app/`. Your checker must send to the same Firebase project to deliver pushes to your build.
 
 ```sh
-cd noticeboard
 flutter pub get
-flutter build apk --debug
+flutter build apk --release
 ```
 
-Find the APK at `build/app/outputs/flutter-apk/app-debug.apk` relative to the Flutter project directory.
+The Android project builds the release variant only. Find the signed APK at `build/app/outputs/flutter-apk/app-release.apk`. Configure `android/key.properties` locally with the existing release signing key for this app. Keep the properties file and signing key out of Git.
 
-Android debug builds offer **Test notification now** and **Test notification in 30 seconds** in Profile. These test local display. Use a checker push to test delivery through Firebase.
+Publish the APK as `noticeboardv2-2.1.0-11.apk` under tag `v2.1.0`. For each future release, use the version and Android build number from `pubspec.yaml`. Publish only once the signed APK is ready. The checker reads both app release repos and makes that build required.
