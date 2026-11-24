@@ -44,6 +44,8 @@ class _NoticeDetailState extends State<NoticeDetail> {
   bool _showProfiles = false;
   String? _renderedHtml;
   Timer? _profileRefresh;
+  TextEditingController? _searchController;
+  bool _searchOpen = false;
 
   bool get _isShortlist {
     final title = widget.noticeIntro?.title?.toLowerCase() ?? '';
@@ -90,6 +92,94 @@ class _NoticeDetailState extends State<NoticeDetail> {
     );
   }
 
+  Future<void> _applyNoticeSearch(String query) async {
+    if (_noticeHtml == null) return;
+    try {
+      final encodedQuery = jsonEncode(query.trim());
+      const script = r"""
+(function(query) {
+  var body = document.body;
+  var oldMarks = body.querySelectorAll('mark.notice-find-highlight');
+  for (var i = oldMarks.length - 1; i >= 0; i--) {
+    var oldMark = oldMarks[i];
+    oldMark.parentNode.replaceChild(document.createTextNode(oldMark.textContent || ''), oldMark);
+  }
+  body.normalize();
+  window.__noticeFindMatches = [];
+  window.__noticeFindIndex = -1;
+  window.__noticeFindStep = function(delta) {
+    var matches = window.__noticeFindMatches || [];
+    if (!matches.length) return;
+    var next = window.__noticeFindIndex + delta;
+    window.__noticeFindIndex = (next % matches.length + matches.length) % matches.length;
+    for (var j = 0; j < matches.length; j++) {
+      matches[j].style.backgroundColor = j === window.__noticeFindIndex ? '#ff9800' : '#ffeb3b';
+      matches[j].style.color = '#111111';
+      matches[j].style.outline = j === window.__noticeFindIndex ? '2px solid #e65100' : 'none';
+    }
+    matches[window.__noticeFindIndex].scrollIntoView({block: 'center', behavior: 'smooth'});
+  };
+  if (!query) return;
+  var walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+    acceptNode: function(node) {
+      var parent = node.parentElement;
+      if (!node.nodeValue || !node.nodeValue.trim() || !parent) return NodeFilter.FILTER_REJECT;
+      if (parent.closest('script, style, mark, noscript')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  var nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  var needle = query.toLocaleLowerCase();
+  for (var n = 0; n < nodes.length; n++) {
+    var node = nodes[n];
+    var original = node.nodeValue;
+    var lower = original.toLocaleLowerCase();
+    var offset = 0;
+    var found = lower.indexOf(needle, offset);
+    if (found < 0) continue;
+    var fragment = document.createDocumentFragment();
+    while (found >= 0) {
+      if (found > offset) fragment.appendChild(document.createTextNode(original.slice(offset, found)));
+      var mark = document.createElement('mark');
+      mark.className = 'notice-find-highlight';
+      mark.style.backgroundColor = '#ffeb3b';
+      mark.style.color = '#111111';
+      mark.textContent = original.slice(found, found + query.length);
+      fragment.appendChild(mark);
+      window.__noticeFindMatches.push(mark);
+      offset = found + query.length;
+      found = lower.indexOf(needle, offset);
+    }
+    if (offset < original.length) fragment.appendChild(document.createTextNode(original.slice(offset)));
+    node.parentNode.replaceChild(fragment, node);
+  }
+  if (window.__noticeFindMatches.length) window.__noticeFindStep(1);
+})(QUERY);
+""";
+      await _webViewController
+          .runJavaScript(script.replaceFirst('QUERY', encodedQuery));
+    } catch (_) {}
+  }
+
+  Future<void> _moveNoticeSearch(int direction) async {
+    try {
+      await _webViewController.runJavaScript(
+          'window.__noticeFindStep && window.__noticeFindStep($direction);');
+    } catch (_) {}
+  }
+
+  void _openNoticeSearch() {
+    _searchController ??= TextEditingController();
+    setState(() => _searchOpen = true);
+  }
+
+  Future<void> _closeNoticeSearch() async {
+    _searchController?.clear();
+    await _applyNoticeSearch('');
+    if (mounted) setState(() => _searchOpen = false);
+  }
+
   @override
   void initState() {
     _noticeContentBloc.context = context;
@@ -109,6 +199,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
   void dispose() {
     _profileRefresh?.cancel();
     _profiles?.dispose();
+    _searchController?.dispose();
     _noticeContentBloc.disposeStreams();
     // Canceling the stream subscription so it does not leaves a dangling listener to the stream preventing race condition
     _streamSubscription.cancel();
@@ -136,37 +227,77 @@ class _NoticeDetailState extends State<NoticeDetail> {
         ),
         backgroundColor: globalBlueColor,
         centerTitle: false,
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (action) {
-              if (_noticeHtml == null || !_isShortlist) return;
-              if (action == 'counts') {
-                _showCounts();
-              } else {
-                _toggleProfiles();
-              }
-            },
-            itemBuilder: (_) => [
-              if (_noticeHtml != null && _isShortlist)
-                const PopupMenuItem(
-                  value: 'counts',
-                  child: Text('Show counts'),
+        actions: _searchOpen
+            ? [
+                IconButton(
+                  tooltip: 'Previous match',
+                  icon: const Icon(Icons.keyboard_arrow_up),
+                  onPressed: () => _moveNoticeSearch(-1),
                 ),
-              PopupMenuItem(
-                value: 'profiles',
-                enabled: _isShortlist && _noticeHtml != null,
-                child: Text(_showProfiles
-                    ? 'Hide student profiles'
-                    : 'Show student profiles'),
+                IconButton(
+                  tooltip: 'Next match',
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  onPressed: () => _moveNoticeSearch(1),
+                ),
+                IconButton(
+                  tooltip: 'Close search',
+                  icon: const Icon(Icons.close),
+                  onPressed: _closeNoticeSearch,
+                ),
+              ]
+            : [
+                IconButton(
+                  tooltip: 'Find in notice',
+                  icon: const Icon(Icons.search),
+                  onPressed: _noticeHtml == null ? null : _openNoticeSearch,
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (action) {
+                    if (_noticeHtml == null || !_isShortlist) return;
+                    if (action == 'counts') {
+                      _showCounts();
+                    } else {
+                      _toggleProfiles();
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    if (_noticeHtml != null && _isShortlist)
+                      const PopupMenuItem(
+                        value: 'counts',
+                        child: Text('Show counts'),
+                      ),
+                    PopupMenuItem(
+                      value: 'profiles',
+                      enabled: _isShortlist && _noticeHtml != null,
+                      child: Text(_showProfiles
+                          ? 'Hide student profiles'
+                          : 'Show student profiles'),
+                    ),
+                  ],
+                ),
+              ],
+        title: _searchOpen
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                onChanged: _applyNoticeSearch,
+                onSubmitted: (_) => _moveNoticeSearch(1),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                cursorColor: Colors.white,
+                decoration: const InputDecoration(
+                  hintText: 'Find in notice',
+                  hintStyle: TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+              )
+            : Text(
+                widget.noticeIntro!.department!,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 18.0, fontWeight: FontWeight.w700),
               ),
-            ],
-          ),
-        ],
-        title: Text(
-          widget.noticeIntro!.department!,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.w700),
-        ),
       ),
       body: PopScope(
         canPop: false,
@@ -247,6 +378,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
       _noticeHtml = source;
       _profileRefresh?.cancel();
       _profiles?.dispose();
+      _searchController?.dispose();
       _profiles = null;
       _renderedHtml = null;
       _showProfiles = false;
