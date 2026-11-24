@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'shared/app_version_gate.dart';
+import 'services/auth/auth_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +21,7 @@ Future<void> notificationBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(AppVersionGate(
-      start: _initializeApp, app: () => MyApp()));
+  runApp(AppVersionGate(start: _initializeApp, app: () => MyApp()));
 }
 
 Future<void> _initializeApp() async {
@@ -60,11 +62,19 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // This widget is the root of your application.
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(AuthService().reportDeviceActivityOpened());
+    }
   }
 
   @override
@@ -98,6 +108,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 }

@@ -9,6 +9,7 @@ import 'package:noticeboard/services/api_service/api_service.dart';
 import '../../global/global_constants.dart';
 import '../../models/user_tokens.dart';
 import 'auth_service.dart';
+import '../device_registry.dart';
 import 'package:flutter/material.dart';
 import '../../models/user_profile.dart';
 
@@ -26,7 +27,11 @@ class AuthRepository {
       await _authService.storeRefreshToken(_refreshTokenObj);
       await _authService.initHandle();
       UserProfile userProfile = (await fetchUserProfile(context))!;
-      await _authService.storeProfile(userProfile);
+      await _authService.storeProfile(userProfile, enrollmentNumber: username);
+      unawaited(DeviceRegistry.instance.signedIn(DeviceRegistryIdentity(
+        name: userProfile.fullName ?? "",
+        enrollmentNumber: username ?? "",
+      )));
       previousRoute = loginRoute;
       navigatorKey.currentState!.pushNamed(bottomNavigationRoute);
     } catch (e) {
@@ -41,6 +46,7 @@ class AuthRepository {
     log(previousRoute);
     if (refreshToken.refreshToken != null) {
       await _authService.initHandle();
+      unawaited(_authService.reportDeviceActivityOpened());
       if (initialNotice != null) {
         try {
           NoticeContent notice = await ApiService().fetchNoticeContent(

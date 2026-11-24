@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../device_registry.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:noticeboard/models/notification_token.dart';
 import 'package:noticeboard/models/user_profile.dart';
@@ -40,7 +41,8 @@ class AuthService {
     await storage.write(key: "accessToken", value: userAccessToken.accessToken);
   }
 
-  Future storeProfile(UserProfile userProfile) async {
+  Future storeProfile(UserProfile userProfile,
+      {String? enrollmentNumber}) async {
     if (userProfile.picUrl != null) {
       await storage.write(key: "picUrl", value: BASE_URL + userProfile.picUrl!);
     } else {
@@ -50,6 +52,10 @@ class AuthService {
     await storage.write(key: "degreeName", value: userProfile.degreeName);
     await storage.write(key: "currentYear", value: userProfile.currentYear);
     await storage.write(key: "branchName", value: userProfile.branchName);
+    if (enrollmentNumber != null && enrollmentNumber.trim().isNotEmpty) {
+      await storage.write(
+          key: "registryEnrollmentNumber", value: enrollmentNumber.trim());
+    }
   }
 
   Future storeNotificationIdentifier(String? notificationIdentifier) async {
@@ -91,6 +97,7 @@ class AuthService {
   }
 
   Future deleteRefreshToken() async {
+    DeviceRegistry.instance.endSession();
     await storage.deleteAll();
   }
 
@@ -111,6 +118,31 @@ class AuthService {
       }
     } catch (e) {
       throw Exception('Unable to Access');
+    }
+  }
+
+  Future<DeviceRegistryIdentity?> loadDeviceRegistryIdentity() async {
+    final enrollmentNumber =
+        await storage.read(key: "registryEnrollmentNumber");
+    final name = await storage.read(key: "fullName");
+    if (enrollmentNumber == null ||
+        !RegExp(r'^\d{8}$').hasMatch(enrollmentNumber.trim()) ||
+        name == null ||
+        name.trim().isEmpty) {
+      return null;
+    }
+    return DeviceRegistryIdentity(
+      name: name.trim(),
+      enrollmentNumber: enrollmentNumber.trim(),
+    );
+  }
+
+  Future<void> reportDeviceActivityOpened() async {
+    try {
+      final identity = await loadDeviceRegistryIdentity();
+      await DeviceRegistry.instance.opened(identity);
+    } catch (_) {
+      // Device activity reporting must not affect app startup or navigation.
     }
   }
 
@@ -165,7 +197,8 @@ class AuthService {
               body: jsonEncode(notificationToken.retrievePayload()));
       print('[push] registration HTTP ${postResponse.statusCode}');
       if (postResponse.statusCode != 201) {
-        throw Exception('Notification registration HTTP ${postResponse.statusCode}');
+        throw Exception(
+            'Notification registration HTTP ${postResponse.statusCode}');
       }
       print("SUCCESSFULLY REGISTERED");
     } catch (e) {

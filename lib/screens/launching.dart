@@ -22,12 +22,12 @@ class Launcher extends StatefulWidget {
 
 class _LauncherState extends State<Launcher> {
   final _authRepository = AuthRepository();
-  late StreamSubscription _sub;
+  StreamSubscription<String?>? _sub;
 
   @override
   void initState() {
-    initiateBrain();
     super.initState();
+    initiateBrain();
   }
 
   Future initiateBrain() async {
@@ -59,8 +59,8 @@ class _LauncherState extends State<Launcher> {
       // Handle exception by warning the user their action did not succeed
       return null;
     }
-    // Attach a listener to the stream
-      _sub = AppLinks().stringLinkStream.listen((String? link) async {
+    // Attach a listener to the stream.
+    _sub = AppLinks().stringLinkStream.listen((String? link) async {
       // Parse the link and warn the user, if it is not correct
       if (link != null) {
         Uri uri = Uri.parse(link);
@@ -95,7 +95,6 @@ class _LauncherState extends State<Launcher> {
       showGenericError();
     });
     return null;
-    // NOTE: Don't forget to call _sub.cancel() in dispose()
   }
 
   Future logout() async {
@@ -136,8 +135,7 @@ class _LauncherState extends State<Launcher> {
 
   @override
   void dispose() {
-    // If the stream is done or it returns an error , cancel the subscription and returns null.
-    AppLinks().stringLinkStream.drain();
+    _sub?.cancel();
     super.dispose();
   }
 }
