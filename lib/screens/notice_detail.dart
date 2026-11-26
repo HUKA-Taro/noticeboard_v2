@@ -360,26 +360,58 @@ class _NoticeDetailState extends State<NoticeDetail> {
     );
   }
 
+  Future<void> _refreshNoticeFormatting() async {
+    if (!mounted) return;
+    // Read the authored backgrounds before changing any foreground colors.
+    const script = r'''
+(() => {
+  if (!document.body) return;
+  const dark = getComputedStyle(document.documentElement).colorScheme === 'dark';
+  const fills = new WeakMap();
+  const changes = [];
+  const base = dark ? [22, 25, 30] : [255, 255, 255];
+  for (const element of document.body.querySelectorAll('*')) {
+    if (element.classList.contains('notice-find-highlight')) continue;
+    const inherited = fills.get(element.parentElement);
+    const style = getComputedStyle(element);
+    const rgb = /^rgba?[(]([^)]+)[)]$/.exec(style.backgroundColor);
+    let fill = inherited;
+    if (rgb) {
+      const channels = rgb[1].split(',').map(Number);
+      const alpha = channels[3] ?? 1;
+      if (alpha > 0 && channels.every(Number.isFinite)) {
+        const under = inherited ?? base;
+        fill = under.map((value, i) => channels[i] * alpha + value * (1 - alpha));
+      }
+    }
+    if (!fill) continue;
+    fills.set(element, fill);
+    if (element.matches('img, svg, svg *, video, canvas')) continue;
+    const linear = fill.map(value => {
+      const srgb = value / 255;
+      return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+    });
+    const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    changes.push([element, luminance >= 0.179 ? '#000000' : '#ffffff']);
+  }
+  for (const [element, color] of changes) {
+    element.style.setProperty('color', color, 'important');
+  }
+})();
+''';
+    try {
+      await _webViewController.runJavaScript(script);
+    } catch (_) {
+      // A document may be replaced while the WebView is updating.
+    }
+    await _restoreNoticeSearch();
+  }
+
   String wrapHtmlHeaders(String originalHtml, {required bool dark}) {
-    const authorHighlight = r'''
-      :is(
-        mark:not(.notice-find-highlight):not([style*="background" i]),
-        [bgcolor="yellow" i], [bgcolor="#ffff00" i], [bgcolor="#ff0" i],
-        [style*="background" i]:is(
-          [style*="yellow" i], [style*="#ffff00" i],
-          [style*="#ff0;" i], [style$="#ff0" i],
-          [style*="rgb(255, 255, 0)" i], [style*="rgb(255,255,0)" i]
-        )
-      )
-    ''';
     final darkStyles = dark ? '''
       html { color-scheme: dark; background: #16191e; color: #ebedf0; }
       body { background: #16191e; color: #ebedf0; }
       a { color: #9bc3ff; }
-      ${authorHighlight.trim()},
-      ${authorHighlight.trim()} :not(.notice-find-highlight) {
-        color: #171717 !important;
-      }
     ''' : '';
     return """
       <!DOCTYPE html>
@@ -433,7 +465,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
     final delegate = PlatformNavigationDelegate(
       const PlatformNavigationDelegateCreationParams(),
     );
-    delegate.setOnPageFinished((_) => unawaited(_restoreNoticeSearch()));
+    delegate.setOnPageFinished((_) => unawaited(_refreshNoticeFormatting()));
     delegate.setOnNavigationRequest((navigation) async {
       final url = navigation.url;
       if (url.endsWith(".pdf") && !pdfAlreadyOpened) {
@@ -468,7 +500,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
       await _webViewController.runJavaScript(
         'document.body.innerHTML = ${jsonEncode(content)};',
       );
-      await _restoreNoticeSearch();
+      await _refreshNoticeFormatting();
     } catch (_) {
       if (mounted && _renderedHtml == content && _renderedDark == dark) {
         await _webViewController.loadHtmlString(fullHtml);

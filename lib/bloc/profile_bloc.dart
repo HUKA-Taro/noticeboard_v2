@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:noticeboard/enum/dynamic_fetch_enum.dart';
 import 'package:noticeboard/models/notice_intro.dart';
 import 'package:noticeboard/repository/profile_repository.dart';
@@ -47,25 +46,13 @@ class ProfileBloc {
         .pushNamed(listNoticesRoute, arguments: bookmarkListNoticeMetaData);
   }
 
-  void feedbackHandler() async {
-    const String playStoreurl =
-        'https://play.google.com/store/apps/details?id=com.img.noticeboard&hl=en_US&gl=IN';
-    const String iosUrl =
-        "https://apps.apple.com/in/app/channel-i-noticeboard/id6443708603";
+  Future<void> feedbackHandler() => _openGitHub('/issues');
 
-    late String url;
-
-    if (Platform.isIOS) {
-      url = iosUrl;
-    } else {
-      url = playStoreurl;
-    }
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.externalApplication,
-      );
-    }
+  Future<void> _openGitHub(String path) async {
+    await launchUrl(
+      Uri.https('github.com', '/HUKA-Taro/noticeboard_v2$path'),
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   void notificationSettingsHandler() async {
@@ -78,15 +65,7 @@ class ProfileBloc {
     }
   }
 
-  void aboutUsHandler() async {
-    const url = "https://channeli.in/maintainer_site/";
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(
-        Uri.parse(url),
-        mode: LaunchMode.inAppBrowserView, // removing webview since it does not provide WindowInsets
-      );
-    }
-  }
+  Future<void> aboutUsHandler() => _openGitHub('');
 
   void disposeStreams() {
     _eventController.close();

@@ -19,6 +19,7 @@ Shortlist parsing depends on the notice's labels and table layout. Some differen
 ### Appearance
 
 - Choose **System**, **Light**, or **Dark** in **Profile > Theme**. The app follows your device theme by default and remembers your choice.
+- Highlighted notice text uses black or white based on the contrast with its background.
 
 ### Notifications
 
