@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'shared/app_version_gate.dart';
+import 'shared/app_theme.dart';
 import 'services/auth/auth_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -21,7 +22,19 @@ Future<void> notificationBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(AppVersionGate(start: _initializeApp, app: () => MyApp()));
+  try {
+    await AppTheme.load();
+  } catch (error) {
+    debugPrint('Could not load appearance settings: $error');
+  }
+  runApp(ValueListenableBuilder<ThemeMode>(
+    valueListenable: AppTheme.mode,
+    builder: (_, mode, __) => AppVersionGate(
+      start: _initializeApp,
+      themeMode: mode,
+      app: () => MyApp(themeMode: mode),
+    ),
+  ));
 }
 
 Future<void> _initializeApp() async {
@@ -58,6 +71,10 @@ Future<void> _initializeApp() async {
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key, required this.themeMode});
+
+  final ThemeMode themeMode;
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -88,11 +105,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       },
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: false,
-          primarySwatch: Colors.blue,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: widget.themeMode,
         onGenerateRoute: MyRouter.generateRoute,
         onGenerateInitialRoutes: (initialRoute) => [
           MyRouter.generateRoute(

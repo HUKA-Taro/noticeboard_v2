@@ -12,6 +12,8 @@ import 'package:webview_flutter_platform_interface/webview_flutter_platform_inte
 import '../global/global_constants.dart';
 import '../models/notice_intro.dart';
 import 'package:flutter/material.dart';
+
+import '../shared/app_theme.dart';
 import '../bloc/notice_content_bloc.dart';
 import '../global/global_functions.dart';
 import '../styles/notice_detail_consts.dart';
@@ -43,14 +45,17 @@ class _NoticeDetailState extends State<NoticeDetail> {
   ShortlistProfiles? _profiles;
   bool _showProfiles = false;
   String? _renderedHtml;
+  bool? _renderedDark;
   Timer? _profileRefresh;
-  TextEditingController? _searchController;
+  final _searchController = TextEditingController();
   bool _searchOpen = false;
 
   bool get _isShortlist {
     final title = widget.noticeIntro?.title?.toLowerCase() ?? '';
     final content = _noticeHtml?.toLowerCase() ?? '';
-    return title.contains('shortlist') || content.contains('shortlist');
+    return title.contains('shortlist') ||
+        content.contains('shortlist') ||
+        RegExp(r'\broom[\s-]+allotments?\b').hasMatch(title);
   }
 
   ShortlistProfiles _loadProfiles() {
@@ -99,6 +104,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
       const script = r"""
 (function(query) {
   var body = document.body;
+  if (!body) return;
   var oldMarks = body.querySelectorAll('mark.notice-find-highlight');
   for (var i = oldMarks.length - 1; i >= 0; i--) {
     var oldMark = oldMarks[i];
@@ -170,14 +176,19 @@ class _NoticeDetailState extends State<NoticeDetail> {
   }
 
   void _openNoticeSearch() {
-    _searchController ??= TextEditingController();
     setState(() => _searchOpen = true);
   }
 
-  Future<void> _closeNoticeSearch() async {
-    _searchController?.clear();
-    await _applyNoticeSearch('');
-    if (mounted) setState(() => _searchOpen = false);
+  void _closeNoticeSearch() {
+    _searchController.clear();
+    setState(() => _searchOpen = false);
+    unawaited(_applyNoticeSearch(''));
+  }
+
+  Future<void> _restoreNoticeSearch() async {
+    if (mounted && _searchOpen && _searchController.text.trim().isNotEmpty) {
+      await _applyNoticeSearch(_searchController.text);
+    }
   }
 
   @override
@@ -199,7 +210,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
   void dispose() {
     _profileRefresh?.cancel();
     _profiles?.dispose();
-    _searchController?.dispose();
+    _searchController.dispose();
     _noticeContentBloc.disposeStreams();
     // Canceling the stream subscription so it does not leaves a dangling listener to the stream preventing race condition
     _streamSubscription.cancel();
@@ -226,6 +237,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
           },
         ),
         backgroundColor: globalBlueColor,
+        foregroundColor: Colors.white,
         centerTitle: false,
         actions: _searchOpen
             ? [
@@ -249,7 +261,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
                 IconButton(
                   tooltip: 'Find in notice',
                   icon: const Icon(Icons.search),
-                  onPressed: _noticeHtml == null ? null : _openNoticeSearch,
+                  onPressed: _openNoticeSearch,
                 ),
                 PopupMenuButton<String>(
                   onSelected: (action) {
@@ -329,14 +341,14 @@ class _NoticeDetailState extends State<NoticeDetail> {
   Expanded buildNoticeContent(double width) {
     return Expanded(
       child: Container(
-        color: Colors.white,
+        color: context.pageSurface,
         width: width,
         child: Center(
           child: StreamBuilder(
             stream: _noticeContentBloc.contentStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
-                return buildContent(snapshot);
+                return buildContent(snapshot, dark: context.isDark);
               } else if (snapshot.hasError) {
                 return buildErrorWidget(snapshot);
               }
@@ -348,13 +360,34 @@ class _NoticeDetailState extends State<NoticeDetail> {
     );
   }
 
-  String wrapHtmlHeaders(String originalHtml) {
+  String wrapHtmlHeaders(String originalHtml, {required bool dark}) {
+    const authorHighlight = r'''
+      :is(
+        mark:not(.notice-find-highlight):not([style*="background" i]),
+        [bgcolor="yellow" i], [bgcolor="#ffff00" i], [bgcolor="#ff0" i],
+        [style*="background" i]:is(
+          [style*="yellow" i], [style*="#ffff00" i],
+          [style*="#ff0;" i], [style$="#ff0" i],
+          [style*="rgb(255, 255, 0)" i], [style*="rgb(255,255,0)" i]
+        )
+      )
+    ''';
+    final darkStyles = dark ? '''
+      html { color-scheme: dark; background: #16191e; color: #ebedf0; }
+      body { background: #16191e; color: #ebedf0; }
+      a { color: #9bc3ff; }
+      ${authorHighlight.trim()},
+      ${authorHighlight.trim()} :not(.notice-find-highlight) {
+        color: #171717 !important;
+      }
+    ''' : '';
     return """
       <!DOCTYPE html>
       <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes">
           <style>
+            $darkStyles
             body {
               font-family: sans-serif;
               font-size: 0.65em;
@@ -372,33 +405,35 @@ class _NoticeDetailState extends State<NoticeDetail> {
     """;
   }
 
-  Container buildContent(AsyncSnapshot snapshot) {
+  Container buildContent(AsyncSnapshot snapshot, {required bool dark}) {
     final source = snapshot.data.content as String? ?? '';
     if (_noticeHtml != source) {
       _noticeHtml = source;
       _profileRefresh?.cancel();
       _profiles?.dispose();
-      _searchController?.dispose();
       _profiles = null;
       _renderedHtml = null;
       _showProfiles = false;
     }
     final content = _showProfiles ? _profiles?.markup ?? source : source;
-    if (_renderedHtml == content) {
+    if (_renderedHtml == content && _renderedDark == dark) {
       return Container(child: webviewFromCreationParams(_webViewController));
     }
-    final modifiedHtml = wrapHtmlHeaders(content);
+    final modifiedHtml = wrapHtmlHeaders(content, dark: dark);
     final firstLoad = _renderedHtml == null;
+    final themeChanged = _renderedDark != dark;
     _renderedHtml = content;
-    if (!firstLoad && _showProfiles) {
+    _renderedDark = dark;
+    if (!firstLoad && !themeChanged && _showProfiles) {
       // Replace the body in place so a progressing lookup preserves the scroll.
       // If the initial document is still loading, reload the full notice.
-      unawaited(_updateWebView(content, modifiedHtml));
+      unawaited(_updateWebView(content, modifiedHtml, dark: dark));
       return Container(child: webviewFromCreationParams(_webViewController));
     }
     final delegate = PlatformNavigationDelegate(
       const PlatformNavigationDelegateCreationParams(),
     );
+    delegate.setOnPageFinished((_) => unawaited(_restoreNoticeSearch()));
     delegate.setOnNavigationRequest((navigation) async {
       final url = navigation.url;
       if (url.endsWith(".pdf") && !pdfAlreadyOpened) {
@@ -428,13 +463,14 @@ class _NoticeDetailState extends State<NoticeDetail> {
     return Container(child: webviewFromCreationParams(_webViewController));
   }
 
-  Future<void> _updateWebView(String content, String fullHtml) async {
+  Future<void> _updateWebView(String content, String fullHtml, {required bool dark}) async {
     try {
       await _webViewController.runJavaScript(
         'document.body.innerHTML = ${jsonEncode(content)};',
       );
+      await _restoreNoticeSearch();
     } catch (_) {
-      if (mounted && _renderedHtml == content) {
+      if (mounted && _renderedHtml == content && _renderedDark == dark) {
         await _webViewController.loadHtmlString(fullHtml);
       }
     }
@@ -442,7 +478,7 @@ class _NoticeDetailState extends State<NoticeDetail> {
 
   Container buildNoticeIntro(double _width) {
     return Container(
-      color: globalLightBlueColor,
+      color: context.noticeTint,
       width: _width,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 20.0),

@@ -1,4 +1,5 @@
 import '../shared/profile_app_update.dart';
+import '../shared/app_theme.dart';
 
 import 'package:flutter/material.dart';
 import 'package:noticeboard/global/global_constants.dart';
@@ -40,16 +41,15 @@ class _ProfileState extends State<Profile> {
     final double _height = MediaQuery.of(context).size.height;
 
     return Scaffold(
-        backgroundColor: Colors.white,
         appBar: AppBar(
           leading: IconButton(
-            icon: screenPopIcon(Colors.black),
+            icon: screenPopIcon(context.colors.onSurface),
             onPressed: () {
               previousRoute = profileRoute;
               navigatorKey.currentState!.pop(context);
             },
           ),
-          backgroundColor: globalWhiteColor,
+          backgroundColor: context.pageSurface,
           elevation: 0,
         ),
         body: SingleChildScrollView(
@@ -117,8 +117,15 @@ class _ProfileState extends State<Profile> {
                   buildMenuItem(
                       feedbackIcon, 'Feedback', ProfileEvents.feedbackEvent),
                   sizedBox(20.0),
+                  _profileSettingsItem(
+                    icon: Icons.brightness_6_outlined,
+                    title: 'Theme',
+                    subtitle: _themeLabel(AppTheme.mode.value),
+                    onTap: _chooseTheme,
+                  ),
+                  sizedBox(20.0),
                   if (CustomPushService.supported)
-                    _profileNotificationItem(
+                    _profileSettingsItem(
                       icon: Icons.settings,
                       title: 'Notification settings',
                       onTap: () => Navigator.of(context).push(MaterialPageRoute(
@@ -160,7 +167,43 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  Widget _profileNotificationItem({
+  String _themeLabel(ThemeMode mode) => switch (mode) {
+        ThemeMode.system => 'System',
+        ThemeMode.light => 'Light',
+        ThemeMode.dark => 'Dark',
+      };
+
+  Future<void> _chooseTheme() async {
+    final current = AppTheme.mode.value;
+    final selected = await showDialog<ThemeMode>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Theme'),
+        children: [
+          for (final mode in ThemeMode.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(mode),
+              child: Row(
+                children: [
+                  Expanded(child: Text(_themeLabel(mode))),
+                  if (mode == current)
+                    Icon(Icons.check, color: context.colors.primary),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null || selected == current) return;
+    try {
+      await AppTheme.save(selected);
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (mounted) showGenericError();
+    }
+  }
+
+  Widget _profileSettingsItem({
     required IconData icon,
     required String title,
     required VoidCallback onTap,

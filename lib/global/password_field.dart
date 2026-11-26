@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../shared/app_theme.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 
@@ -35,7 +37,7 @@ class _PasswordFieldState extends State<PasswordField> {
         textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
           filled: true,
-          fillColor: Colors.grey[200],
+          fillColor: context.isDark ? context.noticeTint : Colors.grey[200],
           contentPadding: EdgeInsets.all(8.0),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(5),
@@ -47,7 +49,7 @@ class _PasswordFieldState extends State<PasswordField> {
             icon: Icon(
               // Based on passwordVisible state choose the icon
               _passwordVisible ? Icons.visibility : Icons.visibility_off,
-              color: Theme.of(context).primaryColorDark,
+              color: context.isDark ? context.colors.onSurfaceVariant : Theme.of(context).primaryColorDark,
             ),
             onPressed: () {
               // Update the state i.e. toogle the state of passwordVisible variable

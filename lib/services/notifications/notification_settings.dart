@@ -3,6 +3,8 @@ import 'package:firebase_messaging/firebase_messaging.dart'
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 
+import '../../shared/app_theme.dart';
+
 import '../../styles/profile_constants.dart';
 import 'backend_status_tile.dart';
 import 'custom_push_service.dart';
@@ -139,10 +141,10 @@ class _NotificationSettingsState extends State<NotificationSettings>
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: globalWhiteColor,
+        backgroundColor: context.pageSurface,
         appBar: AppBar(
-          backgroundColor: globalWhiteColor,
-          foregroundColor: Colors.black,
+          backgroundColor: context.pageSurface,
+          foregroundColor: context.colors.onSurface,
           elevation: 0,
           title: const Text('Notification settings'),
         ),

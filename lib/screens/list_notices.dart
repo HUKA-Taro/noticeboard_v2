@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../shared/app_theme.dart';
+
 import 'package:flutter/services.dart';
 import 'package:focused_menu/modals.dart';
 import 'package:noticeboard/bloc/notice_detail_bloc.dart';
@@ -9,11 +12,14 @@ import 'package:noticeboard/models/filters_list.dart';
 import 'package:noticeboard/models/notice_intro.dart';
 import 'package:noticeboard/models/paginated_info.dart';
 import 'package:noticeboard/services/auth/auth_repository.dart';
+
 import '../enum/list_notices_enum.dart';
 import '../bloc/list_notices_bloc.dart';
 import '../global/global_constants.dart';
 import '../global/global_functions.dart';
+
 import 'package:focused_menu/focused_menu.dart';
+
 import 'filters.dart';
 import '../styles/list_notices_consts.dart';
 
@@ -67,7 +73,11 @@ class _ListNoticesState extends State<ListNotices> {
   }
 
   void pushNoticeDetail(NoticeIntro noticeIntro) {
-    _listNoticesBloc.pushNoticeDetail(noticeIntro , _listNoticesBloc.dynamicNoticeList , _listNoticesBloc);
+    _listNoticesBloc.pushNoticeDetail(
+      noticeIntro,
+      _listNoticesBloc.dynamicNoticeList,
+      _listNoticesBloc,
+    );
   }
 
   bool _handleScrollNotification(ScrollNotification scrollInfo) {
@@ -83,7 +93,7 @@ class _ListNoticesState extends State<ListNotices> {
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: Colors.white,
+      backgroundColor: context.pageSurface,
       appBar: widget.listNoticeMetaData!.noFilters
           ? buildNoFiltersAppBar()
           : widget.listNoticeMetaData!.isSearch
@@ -101,24 +111,26 @@ class _ListNoticesState extends State<ListNotices> {
       child: SafeArea(
         child: Container(
           margin: EdgeInsets.only(bottom: 5.0),
-          decoration: BoxDecoration(boxShadow: <BoxShadow>[
-            BoxShadow(
-                color: Colors.black54,
+          decoration: BoxDecoration(
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: context.mutedText,
                 blurRadius: 2.0,
-                offset: Offset(0.0, 0.30))
-          ], color: Colors.white),
+                offset: Offset(0.0, 0.30),
+              ),
+            ],
+            color: context.pageSurface,
+          ),
           padding: EdgeInsets.only(top: 10.0, bottom: 10.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               IconButton(
-                  icon: Icon(
-                    Icons.arrow_back,
-                    color: Colors.black,
-                  ),
-                  onPressed: () {
-                    navigatorKey.currentState!.pop();
-                  }),
+                icon: Icon(Icons.arrow_back, color: context.colors.onSurface),
+                onPressed: () {
+                  navigatorKey.currentState!.pop();
+                },
+              ),
               Expanded(
                 child: TextField(
                   onSubmitted: (String val) {
@@ -129,43 +141,37 @@ class _ListNoticesState extends State<ListNotices> {
                   decoration: new InputDecoration(
                     border: InputBorder.none,
                     suffixIcon: StreamBuilder<Object>(
-                        stream: _listNoticesBloc.isSearchingStream,
-                        initialData: false,
-                        builder: (context, snapshot) {
-                          if (snapshot.data as bool) {
-                            return IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                color: Color(0xFF5288da),
-                              ),
-                              onPressed: clearSearch,
-                            );
-                          }
-                          return Icon(
-                            Icons.search,
-                            color: Color(0xFF5288da),
+                      stream: _listNoticesBloc.isSearchingStream,
+                      initialData: false,
+                      builder: (context, snapshot) {
+                        if (snapshot.data as bool) {
+                          return IconButton(
+                            icon: Icon(Icons.clear, color: Color(0xFF5288da)),
+                            onPressed: clearSearch,
                           );
-                        }),
+                        }
+                        return Icon(Icons.search, color: Color(0xFF5288da));
+                      },
+                    ),
                     filled: true,
-                    fillColor: Color(0xFFedf4ff),
+                    fillColor: context.noticeTint,
                     hintText: 'Search all notices',
                   ),
                 ),
               ),
-              SizedBox(
-                width: 10.0,
-              ),
+              SizedBox(width: 10.0),
               IconButton(
                 icon: StreamBuilder<bool?>(
-                    stream: _listNoticesBloc.filterActiveStream,
-                    initialData: false,
-                    builder: (context, snapshot) {
-                      return buildSearchFilterActive(snapshot.data!);
-                    }),
+                  stream: _listNoticesBloc.filterActiveStream,
+                  initialData: false,
+                  builder: (context, snapshot) {
+                    return buildSearchFilterActive(snapshot.data!);
+                  },
+                ),
                 onPressed: () {
                   _listNoticesBloc.toggleVisibility();
                 },
-              )
+              ),
             ],
           ),
         ),
@@ -178,23 +184,25 @@ class _ListNoticesState extends State<ListNotices> {
       elevation: 0,
       actions: [
         IconButton(
-            icon: searchIcon,
-            onPressed: () {
-              _listNoticesBloc.pushSearch();
-            }),
+          icon: searchIcon,
+          onPressed: () {
+            _listNoticesBloc.pushSearch();
+          },
+        ),
         IconButton(
           icon: StreamBuilder<bool?>(
-              stream: _listNoticesBloc.filterActiveStream,
-              initialData: false,
-              builder: (context, snapshot) {
-                return buildFilterActive(snapshot.data!);
-              }),
+            stream: _listNoticesBloc.filterActiveStream,
+            initialData: false,
+            builder: (context, snapshot) {
+              return buildFilterActive(snapshot.data!);
+            },
+          ),
           onPressed: () {
             _listNoticesBloc.toggleVisibility();
           },
-        )
+        ),
       ],
-      backgroundColor: globalWhiteColor,
+      backgroundColor: context.pageSurface,
       title: appHeading,
       automaticallyImplyLeading: false,
       leading: GestureDetector(
@@ -214,215 +222,238 @@ class _ListNoticesState extends State<ListNotices> {
         },
         icon: Icon(
           Icons.keyboard_arrow_left,
-          color: Colors.black,
+          color: context.colors.onSurface,
           size: 35.0,
         ),
       ),
       leadingWidth: 40.0,
-      title: Text(widget.listNoticeMetaData!.appBarLabel,
-          style: TextStyle(
-              color: globalBlueColor,
-              fontSize: 18.0,
-              fontWeight: FontWeight.w700)),
-      backgroundColor: Colors.white,
+      title: Text(
+        widget.listNoticeMetaData!.appBarLabel,
+        style: TextStyle(
+          color: globalBlueColor,
+          fontSize: 18.0,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      backgroundColor: context.pageSurface,
       elevation: 0,
     );
   }
 
   StreamBuilder<bool> buildAdvanceNoticesBox(double height, double width) {
     return StreamBuilder<bool>(
-        stream: _listNoticesBloc.filterVisibilityStream,
-        initialData: false,
-        builder: (context, snapshot) {
-          return Container(
-            child: Column(
-              children: [
-                Expanded(
-                  flex: snapshot.data! ? 1 : 0,
-                  child: Visibility(
-                      visible: snapshot.data!,
-                      maintainState: true,
-                      child: Container(
-                        height: height * 0.5,
-                        child: Filters(
-                          onApplyFilters: widget.listNoticeMetaData!.isSearch
-                              ? (FilterResult? filterResult) => _listNoticesBloc
-                                  .applySearchFilters(filterResult)
-                              : (FilterResult? filterResult) =>
-                                  _listNoticesBloc.applyFilters(filterResult),
-                          onCancel: _listNoticesBloc.toggleVisibility,
-                        ),
-                      )),
-                ),
-                Expanded(
-                  flex: !snapshot.data! ? 1 : 0,
-                  child: Visibility(
-                    visible: !snapshot.data!,
-                    maintainState: true,
-                    child: Container(
-                        height: height * 0.5,
-                        child: buildListNoticesBox(height, width)),
+      stream: _listNoticesBloc.filterVisibilityStream,
+      initialData: false,
+      builder: (context, snapshot) {
+        return Container(
+          child: Column(
+            children: [
+              Expanded(
+                flex: snapshot.data! ? 1 : 0,
+                child: Visibility(
+                  visible: snapshot.data!,
+                  maintainState: true,
+                  child: Container(
+                    height: height * 0.5,
+                    child: Filters(
+                      onApplyFilters: widget.listNoticeMetaData!.isSearch
+                          ? (FilterResult? filterResult) =>
+                              _listNoticesBloc.applySearchFilters(filterResult)
+                          : (FilterResult? filterResult) =>
+                              _listNoticesBloc.applyFilters(filterResult),
+                      onCancel: _listNoticesBloc.toggleVisibility,
+                    ),
                   ),
                 ),
-              ],
-            ),
-          );
-        });
+              ),
+              Expanded(
+                flex: !snapshot.data! ? 1 : 0,
+                child: Visibility(
+                  visible: !snapshot.data!,
+                  maintainState: true,
+                  child: Container(
+                    height: height * 0.5,
+                    child: buildListNoticesBox(height, width),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Container buildListNoticesBox(double height, double width) {
     return Container(
       child: RefreshIndicator(
         onRefresh: refreshNotices,
-        child: Stack(children: [
-          ListView(),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              !widget.listNoticeMetaData!.noFilters &&
-                      !widget.listNoticeMetaData!.isSearch
-                  ? StreamBuilder<String?>(
-                      initialData: widget.listNoticeMetaData!.appBarLabel,
-                      stream: _listNoticesBloc.appBarLabelStream,
-                      builder: (context, snapshot) {
-                        return Container(
-                          padding: EdgeInsets.only(
-                              left: 19.0, right: 19.0, top: 15.0, bottom: 15.0),
-                          child: Text(
-                            snapshot.data!,
-                            style: appLabelTxtStyle,
-                          ),
-                        );
-                      })
-                  : Container(),
-              !widget.listNoticeMetaData!.noFilters &&
-                      !widget.listNoticeMetaData!.isSearch
-                  ? StreamBuilder<String>(
-                      stream: _listNoticesBloc.unreadCountStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          if (snapshot.data == '0') return Container();
-                          return GestureDetector(
-                            onTap: _listNoticesBloc.pushImportantNotices,
-                            child: Container(
-                              margin: EdgeInsets.symmetric(horizontal: 19.0),
-                              padding: EdgeInsets.symmetric(vertical: 15.0),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      impNoticesHeading,
-                                      Container(
+        child: Stack(
+          children: [
+            ListView(),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                !widget.listNoticeMetaData!.noFilters &&
+                        !widget.listNoticeMetaData!.isSearch
+                    ? StreamBuilder<String?>(
+                        initialData: widget.listNoticeMetaData!.appBarLabel,
+                        stream: _listNoticesBloc.appBarLabelStream,
+                        builder: (context, snapshot) {
+                          return Container(
+                            padding: EdgeInsets.only(
+                              left: 19.0,
+                              right: 19.0,
+                              top: 15.0,
+                              bottom: 15.0,
+                            ),
+                            child: Text(
+                              snapshot.data!,
+                              style: appLabelTxtStyle,
+                            ),
+                          );
+                        },
+                      )
+                    : Container(),
+                !widget.listNoticeMetaData!.noFilters &&
+                        !widget.listNoticeMetaData!.isSearch
+                    ? StreamBuilder<String>(
+                        stream: _listNoticesBloc.unreadCountStream,
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            if (snapshot.data == '0') return Container();
+                            return GestureDetector(
+                              onTap: _listNoticesBloc.pushImportantNotices,
+                              child: Container(
+                                margin: EdgeInsets.symmetric(horizontal: 19.0),
+                                padding: EdgeInsets.symmetric(vertical: 15.0),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        impNoticesHeading,
+                                        Container(
                                           padding: EdgeInsets.all(5.0),
                                           color: noticeCardColor,
                                           child: Text(
-                                              snapshot.data! + ' Unread',
-                                              style: unreadTxtStyle))
-                                    ],
-                                  ),
-                                  SizedBox(height: 20.0),
-                                  Container(
-                                    width: width * 0.95,
-                                    color: noticeInroGapContainerColor,
-                                    height: 1,
-                                  )
-                                ],
+                                            snapshot.data! + ' Unread',
+                                            style: unreadTxtStyle,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 20.0),
+                                    Container(
+                                      width: width * 0.95,
+                                      color: noticeInroGapContainerColor,
+                                      height: 1,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          }
+                          return Container();
+                        },
+                      )
+                    : Container(),
+                Expanded(
+                  child: Container(
+                    width: width,
+                    child: StreamBuilder<PaginatedInfo?>(
+                      stream: _listNoticesBloc.listNoticesStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          if (snapshot.data!.list!.length == 0)
+                            return buildNoResults();
+                          return buildNoticesList(snapshot, width, height);
+                        } else if (snapshot.hasError) {
+                          return buildErrorWidget(snapshot);
                         }
-                        return Container();
-                      })
-                  : Container(),
-              Expanded(
-                child: Container(
-                  width: width,
-                  child: StreamBuilder<PaginatedInfo?>(
-                    stream: _listNoticesBloc.listNoticesStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        if (snapshot.data!.list!.length == 0)
-                          return buildNoResults();
-                        return buildNoticesList(snapshot, width, height);
-                      } else if (snapshot.hasError) {
-                        return buildErrorWidget(snapshot);
-                      }
-                      if (widget.listNoticeMetaData!.isSearch &&
-                          _listNoticesBloc.searchQuery == '')
-                        return Container();
-                      return buildShimmerList(context, 3); //buildLoading();
-                    },
+                        if (widget.listNoticeMetaData!.isSearch &&
+                            _listNoticesBloc.searchQuery == '')
+                          return Container();
+                        return buildShimmerList(context, 3); //buildLoading();
+                      },
+                    ),
                   ),
                 ),
-              )
-            ],
-          ),
-        ]),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   FutureBuilder buildProfilePic() {
     return FutureBuilder(
-        future: _authRepository.fetchProfileFromStorage(),
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            if (snapshot.data.picUrl != null && snapshot.data.picUrl != "") {
-              return Padding(
-                padding:
-                    const EdgeInsets.only(left: 10.0, top: 6.0, bottom: 4.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(50.0),
-                    child: FadeInImage.assetNetwork(
-                        fit: BoxFit.fill,
-                        placeholder: 'assets/images/user1.jpg',
-                        image: snapshot.data.picUrl),
+      future: _authRepository.fetchProfileFromStorage(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          if (snapshot.data.picUrl != null && snapshot.data.picUrl != "") {
+            return Padding(
+              padding: const EdgeInsets.only(left: 10.0, top: 6.0, bottom: 4.0),
+              child: Container(
+                decoration: BoxDecoration(shape: BoxShape.circle),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(50.0),
+                  child: FadeInImage.assetNetwork(
+                    fit: BoxFit.fill,
+                    placeholder: 'assets/images/user1.jpg',
+                    image: snapshot.data.picUrl,
                   ),
                 ),
-              );
-            } else {
-              return buildNoPic();
-            }
-          } else if (snapshot.hasError) {
+              ),
+            );
+          } else {
             return buildNoPic();
           }
+        } else if (snapshot.hasError) {
           return buildNoPic();
-        });
+        }
+        return buildNoPic();
+      },
+    );
   }
 
   Container buildNoticesList(
-      AsyncSnapshot snapshot, double width, double height) {
+    AsyncSnapshot snapshot,
+    double width,
+    double height,
+  ) {
     return Container(
       width: width,
       child: NotificationListener<ScrollNotification>(
         onNotification: _handleScrollNotification,
         child: ListView.builder(
-            itemCount: snapshot.data.hasMore
-                ? snapshot.data.list.length + 1
-                : snapshot.data.list.length,
-            itemBuilder: (BuildContext context, int index) {
-              if (index == 0) {
-                NoticeIntro noticeIntroObj = snapshot.data.list[0];
-                return buildListItem(noticeIntroObj, width, height, true);
-              }
-              if (index == snapshot.data.list.length) {
-                return buildShimmerList(context, 1);
-              }
-              NoticeIntro noticeIntroObj = snapshot.data.list[index];
-              return buildListItem(noticeIntroObj, width, height, false);
-            }),
+          itemCount: snapshot.data.hasMore
+              ? snapshot.data.list.length + 1
+              : snapshot.data.list.length,
+          itemBuilder: (BuildContext context, int index) {
+            if (index == 0) {
+              NoticeIntro noticeIntroObj = snapshot.data.list[0];
+              return buildListItem(noticeIntroObj, width, height, true);
+            }
+            if (index == snapshot.data.list.length) {
+              return buildShimmerList(context, 1);
+            }
+            NoticeIntro noticeIntroObj = snapshot.data.list[index];
+            return buildListItem(noticeIntroObj, width, height, false);
+          },
+        ),
       ),
     );
   }
 
   FocusedMenuHolder buildListItem(
-      NoticeIntro noticeIntroObj, double width, double height, bool isTop) {
+    NoticeIntro noticeIntroObj,
+    double width,
+    double height,
+    bool isTop,
+  ) {
     return FocusedMenuHolder(
       onPressed: () {
         pushNoticeDetail(noticeIntroObj);
@@ -430,46 +461,67 @@ class _ListNoticesState extends State<ListNotices> {
       menuWidth: MediaQuery.of(context).size.width * 0.50,
       blurSize: 5.0,
       menuItemExtent: 45,
-      menuBoxDecoration: contextMenuDecoration,
+      menuBoxDecoration: context.isDark
+          ? contextMenuDecoration.copyWith(color: context.colors.outlineVariant)
+          : contextMenuDecoration,
       duration: Duration(milliseconds: 100),
       animateMenuItems: true,
       blurBackgroundColor: Colors.black54,
       menuOffset: 10.0,
       bottomOffsetHeight: 80.0,
       menuItems: <FocusedMenuItem>[
-        // Add Each FocusedMenuItem  for Menu Options
         FocusedMenuItem(
-            title: Text(bookMarkTextDecider(noticeIntroObj.starred!)),
-            trailingIcon: bookMarkIconDecider(noticeIntroObj.starred!),
-            onPressed: () {
-              _listNoticesBloc.toggleBookMarkSink.add(noticeIntroObj);
-              HapticFeedback.lightImpact();
-            }),
+          backgroundColor:
+              context.isDark ? context.colors.surfaceContainer : null,
+          title: Text(bookMarkTextDecider(noticeIntroObj.starred!)),
+          trailingIcon: bookMarkIconDecider(noticeIntroObj.starred!),
+          onPressed: () {
+            _listNoticesBloc.toggleBookMarkSink.add(noticeIntroObj);
+            HapticFeedback.lightImpact();
+          },
+        ),
 
         !noticeIntroObj.read!
             ? FocusedMenuItem(
+                backgroundColor:
+                    context.isDark ? context.colors.surfaceContainer : null,
                 title: Text("Mark as Read"),
                 trailingIcon: Icon(Icons.visibility),
                 onPressed: () {
                   _listNoticesBloc.markReadSink.add(noticeIntroObj);
                   HapticFeedback.lightImpact();
-                })
+                },
+              )
             : FocusedMenuItem(
+                backgroundColor:
+                    context.isDark ? context.colors.surfaceContainer : null,
                 title: Text("Mark as unread"),
                 trailingIcon: Icon(Icons.visibility_off),
                 onPressed: () {
                   _listNoticesBloc.markUnreadSink.add(noticeIntroObj);
                   HapticFeedback.lightImpact();
-                }),
+                },
+              ),
       ],
       child: buildNoticeIntroContainer(noticeIntroObj, width, isTop),
     );
   }
 
   Container buildNoticeIntroContainer(
-      NoticeIntro noticeIntroObj, double width, bool isTop) {
+    NoticeIntro noticeIntroObj,
+    double width,
+    bool isTop,
+  ) {
+    final isRead = noticeIntroObj.read == true;
+    final dark = context.isDark;
+    final background = dark
+        ? (isRead ? context.pageSurface : context.colors.surfaceContainerHigh)
+        : (isRead ? noticeReadColor : context.pageSurface);
+    final readTextColor =
+        dark && isRead ? context.colors.onSurfaceVariant : null;
+
     return Container(
-      color: !noticeIntroObj.read! ? globalWhiteColor : noticeReadColor,
+      color: background,
       width: width,
       child: Padding(
         padding: !isTop
@@ -493,8 +545,9 @@ class _ListNoticesState extends State<ListNotices> {
                               children: [
                                 noticeIntroObj.starred!
                                     ? Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 5.0),
+                                        padding: const EdgeInsets.only(
+                                          right: 5.0,
+                                        ),
                                         child: Icon(
                                           Icons.double_arrow,
                                           color: noticeCardColor,
@@ -504,46 +557,57 @@ class _ListNoticesState extends State<ListNotices> {
                                 Expanded(
                                   child: Container(
                                     width: width,
-                                    child: Text(noticeIntroObj.department!,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: departmentTxtStyle),
+                                    child: Text(
+                                      noticeIntroObj.department!,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: departmentTxtStyle.copyWith(
+                                        color: readTextColor,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(
-                              height: 5.0,
-                            ),
+                            SizedBox(height: 5.0),
                             Container(
                               width: width,
-                              child: Text(noticeIntroObj.dateCreated!,
-                                  style: dateTxtStyle,
-                                  overflow: TextOverflow.ellipsis),
-                            )
+                              child: Text(
+                                noticeIntroObj.dateCreated!,
+                                style: dateTxtStyle.copyWith(
+                                    color: readTextColor,
+                                  ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: GestureDetector(
-                              onTap: () {
-                                _listNoticesBloc.toggleBookMarkSink
-                                    .add(noticeIntroObj);
-                              },
-                              child:
-                                  bookMarkIconDecider(noticeIntroObj.starred!)))
+                        padding: const EdgeInsets.only(left: 10.0),
+                        child: GestureDetector(
+                          onTap: () {
+                            _listNoticesBloc.toggleBookMarkSink.add(
+                              noticeIntroObj,
+                            );
+                          },
+                          child: bookMarkIconDecider(noticeIntroObj.starred!),
+                        ),
+                      ),
                     ],
                   ),
-                  SizedBox(
-                    height: 10.0,
-                  ),
+                  SizedBox(height: 10.0),
                   Container(
-                      width: width,
-                      child: Text(noticeIntroObj.title!,
-                          style: noticeTitleTxtStyle,
-                          softWrap: false,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis)),
+                    width: width,
+                    child: Text(
+                      noticeIntroObj.title!,
+                      style: noticeTitleTxtStyle.copyWith(
+                        color: readTextColor,
+                      ),
+                      softWrap: false,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   SizedBox(height: 16.0),
                   Center(
                     child: Container(
@@ -551,7 +615,7 @@ class _ListNoticesState extends State<ListNotices> {
                       color: noticeInroGapContainerColor,
                       height: 0.3,
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
