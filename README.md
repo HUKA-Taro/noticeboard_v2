@@ -9,7 +9,7 @@ This fork keeps the original Channel i noticeboard experience and adds tools for
 ### Noticeboard features
 
 - Browse Channel i notices, search and filter the notice feed, and bookmark notices.
-- Open notices in the app and use **Find in notice** to search the open notice. Matching text is highlighted, and the arrows move between matches. Search opens while the notice loads and applies your query when the content is ready.
+- Open notices in the app and use **Find in notice** to search the open notice. Matching text is highlighted, and the arrows move between matches. 
 - Open shortlist tools from the notice menu when the title or body contains **shortlist**, or the title contains **room allotment**.
 - In shortlist notices, link recognized enrollment numbers to their Channel i student profiles. Choose **Show student profiles** to display available branch and year details alongside the links.
 - Choose **Show counts** to see recognized students, room totals when rooms are listed, and branch totals as profile lookups complete. Counts are based on the entries the app can recognize in that notice.
@@ -19,7 +19,6 @@ Shortlist parsing depends on the notice's labels and table layout. Some differen
 ### Appearance
 
 - Choose **System**, **Light**, or **Dark** in **Profile > Theme**. The app follows your device theme by default and remembers your choice.
-- In dark mode, unread notices stand out against read notices, and yellow highlights in notice text stay readable.
 
 ### Notifications
 
@@ -34,7 +33,7 @@ Android may deliver notifications after the app is swiped away from Recents. If 
 
 ### App updates
 
-- On Android startup, the app shows the Noticeboard loading screen while it checks the minimum supported build policy stored in Firestore. If this installation is below the required build, the app asks you to install the required release before continuing. A previously cached policy can be used if Firestore cannot be reached.
+- On Android startup, the app checks the minimum supported build policy stored in Firestore. If this installation is below the required build, the app asks you to install the required release before continuing. A previously cached policy can be used if Firestore cannot be reached.
 - **Profile** shows the installed app version and lets you check the policy again. When an update is required, the app opens the release APK download; Android asks you to confirm the installation. The app cannot silently install an APK.
 
 The version policy and APK download link must be kept current when a release is published. The update flow depends on the Firestore policy being available and the release APK being downloadable.
